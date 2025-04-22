@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Temperature Graph</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #0b2e14;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #e0ffe3;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 {
+      text-align: center;
+      color: #7cff80;
+      margin: 1rem 0;
+    }
+
+    #chart-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    #temperatureChart {
+      width: 100%;
+      max-width: 800px;
+      height: 100%;
+    }
+
+    #backLink {
+      text-align: center;
+      background-color: #0b2e14;
+      padding: 1rem;
+    }
+
+    #backLink a {
+      color: #9effa8;
+      text-decoration: none;
+      font-size: 1.1rem;
+    }
+
+    #backLink a:hover {
+      text-decoration: underline;
+    }
+
+    .chart-controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .chart-controls button {
+      background-color: #1f7a3e;
+      color: #e0ffe3;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 4px 8px rgba(0, 255, 128, 0.2);
+    }
+
+    .chart-controls button:hover {
+      background-color: #29a75e;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<script src="/alerts.js"></script>
+
+<body>
+  <h1>Temperature Graph</h1>
+
+  <div id="chart-container">
+    <canvas id="temperatureChart"></canvas>
+    <div class="chart-controls">
+      <button onclick="downloadCSV()">Download CSV</button>
+      <button onclick="resetZoom()">Reset Zoom</button>
+    </div>
+  </div>
+
+  <div id="backLink">
+    <a href="index.html">Back to Dashboard</a>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const ctx = document.getElementById('temperatureChart').getContext('2d');
+
+    const temperatureData = {
+      labels: [],
+      datasets: [{
+        label: 'Temperature (°C)',
+        data: [],
+        borderColor: '#00ff66',
+        borderWidth: 3,
+        pointBackgroundColor: '#ffff00',
+        pointBorderColor: '#ffffff',
+        tension: 0.3,
+      }]
+    };
+
+    const config = {
+      type: 'line',
+      data: temperatureData,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Time',
+              color: '#ffffff'
+            },
+            ticks: {
+              color: '#ffffff',
+              autoSkip: true,
+              maxTicksLimit: 10
+            },
+            grid: {
+              color: '#1f4034'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Temperature (°C)',
+              color: '#ffffff'
+            },
+            ticks: {
+              color: '#ffffff'
+            },
+            min: 0,
+            max: 50,
+            grid: {
+              color: '#1f4034'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: '#ffffff'
+            }
+          },
+          zoom: {
+            pan: {
+              enabled: true,
+              mode: 'xy'
+            },
+            zoom: {
+              wheel: {
+                enabled: true
+              },
+              pinch: {
+                enabled: true
+              },
+              mode: 'xy'
+            }
+          }
+        }
+      }
+    };
+
+    const temperatureChart = new Chart(ctx, config);
+
+    socket.on('sensorData-Temperature', (data) => {
+      const labels = data.history.map(d => d.key); // Use 'key' for timestamp
+      const values = data.history.map(d => d.value);
+
+      console.log("Temperature Labels:", labels);
+      console.log("Temperature Values:", values);
+
+      temperatureChart.data.labels = labels;
+      temperatureChart.data.datasets[0].data = values;
+      temperatureChart.update();
+
+      checkForTemperatureAlert(data); // <-- Add this
+    });
+    function downloadCSV() {
+      let csvContent = "data:text/csv;charset=utf-8,Time,Temperature\n";
+      for (let i = 0; i < temperatureChart.data.labels.length; i++) {
+        const time = temperatureChart.data.labels[i];
+        const temp = temperatureChart.data.datasets[0].data[i] || '';
+        csvContent += `${time},${temp}\n`;
+      }
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "temperature_data.csv");
+      document.body.appendChild(link); // Required for Firefox
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function resetZoom() {
+      temperatureChart.resetZoom();
+    }
+
+  </script>
+</body>
+
+</html>

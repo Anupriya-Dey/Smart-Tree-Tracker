@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acceleration Graph</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #0b2e14;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #e0ffe3;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 {
+      text-align: center;
+      color: #7cff80;
+      margin: 1rem 0;
+    }
+
+    #chart-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    #accelerationChart {
+      width: 100%;
+      max-width: 900px;
+      height: 100%;
+    }
+
+    #backLink {
+      text-align: center;
+      background-color: #0b2e14;
+      padding: 1rem;
+    }
+
+    #backLink a {
+      color: #9effa8;
+      text-decoration: none;
+      font-size: 1.1rem;
+    }
+
+    #backLink a:hover {
+      text-decoration: underline;
+    }
+
+    .chart-controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .chart-controls button {
+      background-color: #1f7a3e;
+      color: #e0ffe3;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 4px 8px rgba(0, 255, 128, 0.2);
+    }
+
+    .chart-controls button:hover {
+      background-color: #29a75e;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<script src="/alerts.js"></script>
+
+<body>
+  <h1>Acceleration Graph</h1>
+
+  <div id="chart-container">
+    <canvas id="accelerationChart"></canvas>
+    <div class="chart-controls">
+      <button onclick="downloadCSV()">Download CSV</button>
+      <button onclick="resetZoom()">Reset Zoom</button>
+    </div>
+  </div>
+
+  <div id="backLink">
+    <a href="index.html">Back to Dashboard</a>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const ctx = document.getElementById('accelerationChart').getContext('2d');
+
+    const accelerationData = {
+      labels: [],
+      datasets: [
+        {
+          label: 'X-axis',
+          data: [],
+          borderColor: '#ff4d4d',
+          borderWidth: 3,
+          pointBackgroundColor: '#ffcccc',
+          pointBorderColor: '#ffffff',
+          tension: 0.3
+        },
+        {
+          label: 'Y-axis',
+          data: [],
+          borderColor: '#4da6ff',
+          borderWidth: 3,
+          pointBackgroundColor: '#cce6ff',
+          pointBorderColor: '#ffffff',
+          tension: 0.3
+        },
+        {
+          label: 'Z-axis',
+          data: [],
+          borderColor: '#4dff88',
+          borderWidth: 3,
+          pointBackgroundColor: '#ccffe0',
+          pointBorderColor: '#ffffff',
+          tension: 0.3
+        }
+      ]
+    };
+
+    const config = {
+      type: 'line',
+      data: accelerationData,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Time',
+              color: '#ffffff'
+            },
+            ticks: {
+              color: '#ffffff',
+              autoSkip: true,
+              maxTicksLimit: 10
+            },
+            grid: {
+              color: '#1f4034'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Acceleration (m/s²)',
+              color: '#ffffff'
+            },
+            ticks: {
+              color: '#ffffff'
+            },
+            min: -100,
+            max: 100,
+            grid: {
+              color: '#1f4034'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: '#ffffff'
+            }
+          },
+          zoom: {
+            pan: {
+              enabled: true,
+              mode: 'xy'
+            },
+            zoom: {
+              wheel: {
+                enabled: true
+              },
+              pinch: {
+                enabled: true
+              },
+              mode: 'xy'
+            }
+          }
+        }
+      }
+    };
+
+    const accelerationChart = new Chart(ctx, config);
+
+    // Buffers for data
+    let xHistory = [];
+    let yHistory = [];
+    let zHistory = [];
+
+    // Helper to update chart if all histories have same length
+    function updateChart() {
+      // if (
+      //   xHistory.length === yHistory.length &&
+      //   yHistory.length === zHistory.length &&
+      //   xHistory.length > 0
+      // )
+      {
+        const labels = xHistory.map((d) => d.key);
+        const xData = xHistory.map((d) => d.value);
+        const yData = yHistory.map((d) => d.value);
+        const zData = zHistory.map((d) => d.value);
+
+        console.log("Labels:", labels);
+        console.log("X:", xData);
+        console.log("Y:", yData);
+        console.log("Z:", zData);
+
+        accelerationChart.data.labels = labels;
+        accelerationChart.data.datasets[0].data = xData;
+        accelerationChart.data.datasets[1].data = yData;
+        accelerationChart.data.datasets[2].data = zData;
+        accelerationChart.update();
+      }
+    }
+    socket.on('sensorData-Temperature', (data) => {
+      checkForTemperatureAlert(data); // <-- Add this
+    });
+    // Socket listeners per axis
+    socket.on('sensorData-AccelerationX', (data) => {
+      xHistory = data.history;
+      updateChart();
+    });
+
+    socket.on('sensorData-AccelerationY', (data) => {
+      yHistory = data.history;
+      updateChart();
+    });
+
+    socket.on('sensorData-AccelerationZ', (data) => {
+      zHistory = data.history;
+      updateChart();
+    });
+
+    function downloadCSV() {
+      let csvContent = "data:text/csv;charset=utf-8,Time,X,Y,Z\n";
+      for (let i = 0; i < accelerationChart.data.labels.length; i++) {
+        const time = accelerationChart.data.labels[i];
+        const x = accelerationChart.data.datasets[0].data[i] || '';
+        const y = accelerationChart.data.datasets[1].data[i] || '';
+        const z = accelerationChart.data.datasets[2].data[i] || '';
+        // If value is null or undefined, leave it empty; otherwise, use the value (even if 0)
+        const xVal = x != null ? x : '';
+        const yVal = y != null ? y : '';
+        const zVal = z != null ? z : '';
+
+        csvContent += `${time},${xVal},${yVal},${zVal}\n`;
+      }
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "acceleration_data.csv");
+      document.body.appendChild(link); // Required for Firefox
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function resetZoom() {
+      accelerationChart.resetZoom();
+    }
+
+
+  </script>
+
+</body>
+
+</html>

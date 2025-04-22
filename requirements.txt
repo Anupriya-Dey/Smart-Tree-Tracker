@@ -1,0 +1,7 @@
+pandas
+transformers
+datasets
+Deprecated
+scikit-learn
+torch
+accelerate>=0.26.0

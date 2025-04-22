@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Location (Free)</title>
+
+  <!-- Leaflet CSS & JS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0b2e14;
+      color: #e0ffe3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    h1 {
+      text-align: center;
+      color: #7cff80;
+      margin-bottom: 2rem;
+    }
+
+    #map {
+      width: 100%;
+      height: 500px;
+      margin-bottom: 2rem;
+    }
+
+    a {
+      color: #9effa8;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Live Location</h1>
+  <div id="map"></div>
+  <a href="index.html">Back to Dashboard</a>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    // Initialize Leaflet map
+    const map = L.map('map').setView([0, 0], 15);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Add marker
+    const marker = L.marker([0, 0]).addTo(map);
+
+    // Store latest lat/lng
+    let latestLat = 0;
+    let latestLng = 0;
+
+    socket.on('sensorData-Latitude', (data) => {
+      latestLat = data.latest;
+      updateMarker();
+    });
+
+    socket.on('sensorData-Longitude', (data) => {
+      latestLng = data.latest;
+      updateMarker();
+    });
+
+    function updateMarker() {
+      const lat = parseFloat(latestLat);
+      const lng = parseFloat(latestLng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        marker.setLatLng([lat, lng]);
+        map.setView([lat, lng], 15);
+      }
+    }
+  </script>
+</body>
+</html>
