@@ -13,14 +13,14 @@
 // WiFi & Firebase config
 #define _SSID "Manu"
 #define _PASSWORD "12345678"
-#define REFERENCE_URL "https://iotalternateproject-default-rtdb.asia-southeast1.firebasedatabase.app/"
+#define REFERENCE_URL "https://iotgroup-12-default-rtdb.asia-southeast1.firebasedatabase.app/"
 Firebase firebase(REFERENCE_URL);
 
 // Pins
 #define SDA_PIN 2  // D4
 #define SCL_PIN 5  // D1
-#define GPS_RX_PIN 4  // D2
-#define GPS_TX_PIN 0  // D3
+#define GPS_RX_PIN 14  // D5
+#define GPS_TX_PIN 12  // D6
 
 // Sensors
 Adafruit_BMP280 bmp;
@@ -31,10 +31,11 @@ SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 19800); // IST offset
 
+
 void initSensors();
 void readIMU(const String &timestamp);
 void readBarometer(const String &timestamp);
-//void readGPS(const String &timestamp);
+void readGPS(const String &timestamp);
 String getTimestamp();
 
 void setup() {
@@ -61,10 +62,7 @@ void loop() {
   timeClient.update();
 
   time_t epochTime = timeClient.getEpochTime();
-  struct tm *ptm = gmtime((time_t *)&epochTime);
-
-//   String currentDate = String(ptm->tm_year + 1900) + "-" + String(ptm->tm_mon + 1) + "-" + String(ptm->tm_mday);
-  String timeStr = String(currentDate + " " + String(timeClient.getHours()) + ":" + String(timeClient.getMinutes()));
+  String timeStr = timeClient.getFormattedTime();
 
   Serial.println("Timestamp: " + timeStr);
 
@@ -72,7 +70,7 @@ void loop() {
   readBarometer(timeStr);
   readGPS(timeStr);
 
-  delay(60000);
+  delay(10000);
 }
 
 void initSensors() {
