@@ -13,17 +13,18 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      background-color: #0b2e14;
+      background-color: #111;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #e0ffe3;
+      color: #fff;
       display: flex;
       flex-direction: column;
     }
 
     h1 {
       text-align: center;
-      color: #7cff80;
+      color: #fff;
       margin: 1rem 0;
+      font-size: 3rem;
     }
 
     #chart-container {
@@ -42,12 +43,12 @@
 
     #backLink {
       text-align: center;
-      background-color: #0b2e14;
+      background-color: #111;
       padding: 1rem;
     }
 
     #backLink a {
-      color: #9effa8;
+      color: #fff;
       text-decoration: none;
       font-size: 1.1rem;
     }
@@ -208,32 +209,59 @@
 
     // Helper to update chart if all histories have same length
     function updateChart() {
-      // if (
-      //   xHistory.length === yHistory.length &&
-      //   yHistory.length === zHistory.length &&
-      //   xHistory.length > 0
-      // )
-      {
-        const labels = xHistory.map((d) => d.key);
-        const xData = xHistory.map((d) => d.value);
-        const yData = yHistory.map((d) => d.value);
-        const zData = zHistory.map((d) => d.value);
+      // Ensure we only keep the latest 10 points for each axis
+      const maxPoints = 10;
 
-        console.log("Labels:", labels);
-        console.log("X:", xData);
-        console.log("Y:", yData);
-        console.log("Z:", zData);
+      // Slice the history arrays to get only the latest 10 points
+      const slicedX = xHistory.slice(-maxPoints);
+      const slicedY = yHistory.slice(-maxPoints);
+      const slicedZ = zHistory.slice(-maxPoints);
 
-        accelerationChart.data.labels = labels;
-        accelerationChart.data.datasets[0].data = xData;
-        accelerationChart.data.datasets[1].data = yData;
-        accelerationChart.data.datasets[2].data = zData;
-        accelerationChart.update();
-      }
+      // Generate the labels and data for each axis
+      const labels = slicedX.map((d) => d.key);
+      const xData = slicedX.map((d) => d.value);
+      const yData = slicedY.map((d) => d.value);
+      const zData = slicedZ.map((d) => d.value);
+
+      console.log("Labels:", labels);
+      console.log("X:", xData);
+      console.log("Y:", yData);
+      console.log("Z:", zData);
+
+      // Update chart data with sliced arrays
+      accelerationChart.data.labels = labels;
+      accelerationChart.data.datasets[0].data = xData;
+      accelerationChart.data.datasets[1].data = yData;
+      accelerationChart.data.datasets[2].data = zData;
+      accelerationChart.update();
     }
     socket.on('sensorData-Temperature', (data) => {
       checkForTemperatureAlert(data); // <-- Add this
     });
+    socket.on('sensorData-Pressure', (data) => {
+      checkForPressureAlert(data);
+    });
+
+    socket.on('sensorData-GPS_Speed', (data) => {
+      checkForGPS_SpeedAlert(data);
+    });
+
+    socket.on('sensorData-GPS_Altitude', (data) => {
+      checkForGPS_AltitudeAlert(data);
+    });
+
+    let latestLatitude = null;
+    let latestLongitude = null;
+    socket.on('sensorData-GPS_Latitude', (data) => {
+      latestLatitude = data.latest;
+      triggerPositionCheckIfReady();
+    });
+
+    socket.on('sensorData-GPS_Longitude', (data) => {
+      latestLongitude = data.latest;
+      triggerPositionCheckIfReady();
+    });
+
     // Socket listeners per axis
     socket.on('sensorData-AccelerationX', (data) => {
       xHistory = data.history;

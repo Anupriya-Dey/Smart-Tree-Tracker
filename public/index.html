@@ -5,281 +5,158 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Smart Tree Tracker</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #0b2e14;
-      color: #e0ffe3;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem;
-    }
+  <link rel="stylesheet" href="/styles.css">
 
-    h1 {
-      text-align: center;
-      color: #7cff80;
-      margin-bottom: 3rem;
-      font-size: 2.5rem;
-    }
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2rem;
-      width: 100%;
-      max-width: 1000px;
-    }
-
-    .box {
-      background-color: #134d2d;
-      border: 2px solid #25a058;
-      border-radius: 1rem;
-      padding: 1.5rem;
-      box-shadow: 0 0 20px #1fd67830;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-    }
-
-    .box h2 {
-      margin-bottom: 1rem;
-      color: #9effa8;
-    }
-
-    .subdata {
-      margin: 0.3rem 0;
-    }
-
-    /* Make last row span 2 columns */
-    .bottom-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 2rem;
-      margin-top: 2rem;
-      width: 100%;
-      max-width: 1000px;
-    }
-
-    @media (max-width: 768px) {
-
-      .grid,
-      .bottom-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    a {
-      color: #9effa8;
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-  </style>
 </head>
 <script src="/alerts.js"></script>
 
 <body>
   <h1>Smart Tree Tracker</h1>
-
-  <div class="grid">
-    <div class="box">
-      <h2><a href="temperature.html">Temperature</a></h2>
-      <p id="Temperature">Loading...</p>
+  <div class="top-grid">
+    <div class="box box-large">
+      <!-- <div class="box temperature-box"> -->
+      <h2 class="SensorTitle"><a href="temperature.html">Temperature</a></h2>
+      <div class="thermometer-container">
+        <div class="thermometer">
+          <div class="thermometer-fill" id="thermometerFill"></div>
+        </div>
+        <p id="Temperature" class="sensor-reading">Loading...</p>
+      </div>
+      <!-- </div> -->
     </div>
 
-    <div class="box">
-      <h2><a href="pressure.html">Pressure</a></h2>
-      <p id="Pressure">Loading...</p>
+    <div class="box box-large">
+      <h2 class="SensorTitle"><a href="pressure.html">Pressure (kPa)</a></h2>
+      <div class="icon-text pressure-box">
+        <img src="/icons/pressure-icon.svg" alt="Pressure Icon" class="sensor-icon large-icon">
+        <p id="Pressure" class="sensor-reading">Loading...</p>
+      </div>
     </div>
 
-    <div class="box">
-      <h2><a href="location.html">Location</a></h2>
-      <p class="subdata">Lat: <span id="Latitude">-</span></p>
-      <p class="subdata">Lng: <span id="Longitude">-</span></p>
-    </div>
-  </div>
-
-  <div class="bottom-grid">
-    <div class="box">
-      <h2><a href="acceleration.html">Acceleration</a></h2>
+    <div class="box box-small">
+      <h2 class="SensorTitle"><a href="acceleration.html">Acceleration</a></h2>
       <p class="subdata">X: <span id="AccelerationX">-</span></p>
       <p class="subdata">Y: <span id="AccelerationY">-</span></p>
       <p class="subdata">Z: <span id="AccelerationZ">-</span></p>
     </div>
 
-    <div class="box">
-      <h2><a href="gyroscope.html">Gyroscope</a></h2>
+    <div class="box box-small">
+      <h2 class="SensorTitle"><a href="gyroscope.html">Gyroscope</a></h2>
       <p class="subdata">X: <span id="GyroscopeX">-</span></p>
       <p class="subdata">Y: <span id="GyroscopeY">-</span></p>
       <p class="subdata">Z: <span id="GyroscopeZ">-</span></p>
     </div>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-
-    const sensorList = [
-      'Temperature',
-      'Pressure',
-      'AccelerationX',
-      'AccelerationY',
-      'AccelerationZ',
-      'GyroscopeX',
-      'GyroscopeY',
-      'GyroscopeZ'
-    ];
-
-    sensorList.forEach(sensor => {
-      socket.on(`sensorData-${sensor}`, (data) => {
-        const element = document.getElementById(sensor);
-        if (element) element.textContent = data.latest;
-      });
-    });
-
-    // Assuming you have GPS data emitting with keys Latitude and Longitude
-    socket.on('sensorData-Latitude', (data) => {
-      const lat = document.getElementById('Latitude');
-      if (lat) lat.textContent = data.latest;
-    });
-
-    socket.on('sensorData-Longitude', (data) => {
-      const lng = document.getElementById('Longitude');
-      if (lng) lng.textContent = data.latest;
-    });
-  </script>
-
-  <!-- ADD THIS BELOW YOUR EXISTING CODE, BEFORE THE CLOSING </body> TAG -->
 
   <!-- Time-Series Graph Section -->
-  <div style="width: 100%; max-width: 1000px; margin-top: 3rem;">
-    <h2 style="color: #7cff80; text-align: center; margin-bottom: 1rem;">Sensor Data - Time Series</h2>
-    <canvas id="sensorChart" style="background-color: #ffffff;"></canvas>
+  <div class="bottom-grid">
+    <div class="chart-section">
+      <!-- <h2>Temperature : Time Series Prediction</h2>
+      <canvas id="sensorChart"></canvas> -->
+      <div style="margin-bottom: 1rem;">
+        <label for="sensorSelect" style="color: #9effa8; font-weight: bold;">Select Sensor:</label>
+        <select id="sensorSelect" style="margin-left: 0.5rem; padding: 0.4rem; border-radius: 6px;">
+          <option value="temperature" selected>Temperature</option>
+          <option value="pressure">Pressure</option>
+        </select>
+      </div>
+      <canvas id="sensorChart"></canvas>
+    </div>
+
+    <!-- Location Section -->
+    <div class="box location-box">
+      <div id="map" style="width: 100%; height: 800px;"></div>
+    </div>
   </div>
 
   <!-- Mailing List Section -->
-  <div style="width: 100%; max-width: 600px; margin-top: 3rem; text-align: center;">
-    <h2 style="color: #7cff80;">Subscribe to our Mailing List</h2>
+  <div class="subscribe-box">
+    <h2>🌿 Subscribe to Our Mailing List 🌿</h2>
     <p>Stay updated with real-time alerts and health reports of the tree.</p>
     <form id="subscribeForm">
-      <input type="email" id="emailInput" placeholder="Enter your email" required
-        style="padding: 0.5rem; width: 70%; border-radius: 0.5rem; border: none; margin-bottom: 1rem;">
+      <input type="email" id="emailInput" placeholder="Enter your email" required class="email-input" />
       <br />
-      <button type="submit"
-        style="padding: 0.6rem 1.2rem; background-color: #25a058; border: none; color: white; border-radius: 0.5rem; cursor: pointer;">Subscribe</button>
+      <button type="submit" class="subscribe-button">Subscribe</button>
     </form>
-    <p id="subscriptionMessage" style="margin-top: 1rem;"></p>
+    <p id="subscriptionMessage" class="subscription-message"></p>
   </div>
 
+
+  <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+  <script src="/dashboard.js"></script>
   <script>
-    const ctx = document.getElementById('sensorChart').getContext('2d');
 
-    let labels = [];           // Future timestamps
-    let predictionData = [];   // Predicted values
-
-    const sensorChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Forecasted Temperature (°C)',
-          data: predictionData,
-          fill: false,
-          borderColor: '#ff6384',
-          borderDash: [5, 5],
-          tension: 0.2
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: 'Future Time (1-min steps)'
-            }
-          },
-          y: {
-            title: {
-              display: true,
-              text: 'Temperature (°C)'
-            },
-            min: 0,
-            max: 50,
-          }
-        }
-      }
+    socket.on('sensorData-Temperature', (data) => {
+      checkForTemperatureAlert(data); // <-- Add this
     });
 
-    // Handle predicted temperatures from server
-    socket.on('temperaturePrediction', (predictionStr) => {
-      try {
-        // console.log(predictionStr);
-        const predictions = JSON.parse(predictionStr); // Expecting an array of 96 values
-
-        // Ensure predictions are an array of 96 values
-        if (!Array.isArray(predictions) || predictions.length !== 96) {
-          console.error("Invalid predictions data");
-          return;
-        }
-
-        // Generate 96 future timestamps (1-minute apart)
-        const now = new Date();
-        const futureLabels = [];
-
-        // Generate 96 future timestamps, one for each prediction
-        for (let i = 73; i <= 96; i++) {
-          const future = new Date(now.getTime() + i * 60000); // 1 min = 60000 ms
-          futureLabels.push(future.toLocaleTimeString());
-        }
-
-        // Update chart with predictions
-        labels = futureLabels;  // Set new future time labels
-        predictionData = predictions.slice(-24);  // Set new prediction data
-
-        // Update the chart
-        sensorChart.data.labels = labels;  // Set the new labels for the x-axis
-        sensorChart.data.datasets[0].data = predictionData;  // Set the predicted values for the chart
-        sensorChart.update();  // Update the chart to reflect the changes
-      } catch (err) {
-        console.error("Failed to parse predictions:", err);
-      }
+    socket.on('sensorData-Pressure', (data) => {
+      checkForPressureAlert(data);
     });
 
-    document.getElementById('subscribeForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('emailInput').value;
-
-      try {
-        const response = await fetch('/subscribe', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ email })
-        });
-
-        const result = await response.json();
-        document.getElementById('subscriptionMessage').textContent = result.message;
-        document.getElementById('emailInput').value = '';
-      } catch (error) {
-        document.getElementById('subscriptionMessage').textContent = 'Subscription failed. Try again later.';
-        console.error("Subscription error:", error);
-      }
+    socket.on('sensorData-GPS_Speed', (data) => {
+      checkForGPS_SpeedAlert(data);
     });
 
+    socket.on('sensorData-GPS_Altitude', (data) => {
+      checkForGPS_AltitudeAlert(data);
+    });
+
+    let latestLatitude = null;
+    let latestLongitude = null;
+    socket.on('sensorData-GPS_Latitude', (data) => {
+      latestLatitude = data.latest;
+      triggerPositionCheckIfReady();
+    });
+
+    socket.on('sensorData-GPS_Longitude', (data) => {
+      latestLongitude = data.latest;
+      triggerPositionCheckIfReady();
+    });
+
+
+    const socket2 = io();
+
+    // Initialize Leaflet map
+    const map = L.map('map').setView([0, 0], 15);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Add marker
+    const marker = L.marker([0, 0]).addTo(map);
+
+    // Store latest lat/lng
+    let latestLat = 0;
+    let latestLng = 0;
+
+    socket2.on('sensorData-GPS_Latitude', (data) => {
+      latestLat = data.latest;
+      updateMarker();
+    });
+
+    socket2.on('sensorData-GPS_Longitude', (data) => {
+      latestLng = data.latest;
+      updateMarker();
+    });
+
+    function updateMarker() {
+      const lat = parseFloat(latestLat);
+      const lng = parseFloat(latestLng);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        marker.setLatLng([lat, lng]);
+        map.setView([lat, lng], 15);
+      }
+    }
   </script>
-
-
-
 </body>
 
 </html>

@@ -13,17 +13,18 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      background-color: #0b2e14;
+      background-color: #111;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #e0ffe3;
+      color: #fff;
       display: flex;
       flex-direction: column;
     }
 
     h1 {
       text-align: center;
-      color: #7cff80;
+      color: #fff;
       margin: 1rem 0;
+      font-size: 3rem;
     }
 
     #chart-container {
@@ -42,12 +43,12 @@
 
     #backLink {
       text-align: center;
-      background-color: #0b2e14;
+      background-color: #111;
       padding: 1rem;
     }
 
     #backLink a {
-      color: #9effa8;
+      color: #fff;
       text-decoration: none;
       font-size: 1.1rem;
     }
@@ -180,20 +181,54 @@
     };
 
     const pressureChart = new Chart(ctx, config);
+
+    // Limit to the latest 10 data points
+    const maxPoints = 10;
+
+    // Socket listener for pressure data
     socket.on('sensorData-Temperature', (data) => {
-      checkForTemperatureAlert(data); // <-- Add this
+      checkForTemperatureAlert(data); // <-- Add this to check for temperature alerts
     });
+
+    // Socket listener for pressure data
     socket.on('sensorData-Pressure', (data) => {
-      const labels = data.history.map(d => d.key); // Use 'key' for timestamp
-      const values = data.history.map(d => d.value);
+      // Slice the data to get only the latest 10 points
+      const slicedHistory = data.history.slice(-maxPoints);
+
+      const labels = slicedHistory.map(d => d.key); // Use 'key' for timestamp
+      const values = slicedHistory.map(d => d.value);
 
       console.log("Pressure Labels:", labels);
       console.log("Pressure Values:", values);
 
+      // Update the chart with the sliced data
       pressureChart.data.labels = labels;
       pressureChart.data.datasets[0].data = values;
       pressureChart.update();
+      checkForPressureAlert(data);
     });
+
+    socket.on('sensorData-GPS_Speed', (data) => {
+      checkForGPS_SpeedAlert(data);
+    });
+
+    socket.on('sensorData-GPS_Altitude', (data) => {
+      checkForGPS_AltitudeAlert(data);
+    });
+
+    let latestLatitude = null;
+    let latestLongitude = null;
+    socket.on('sensorData-GPS_Latitude', (data) => {
+      latestLatitude = data.latest;
+      triggerPositionCheckIfReady();
+    });
+
+    socket.on('sensorData-GPS_Longitude', (data) => {
+      latestLongitude = data.latest;
+      triggerPositionCheckIfReady();
+    });
+
+
     function downloadCSV() {
       let csvContent = "data:text/csv;charset=utf-8,Time,Pressure\n";
       for (let i = 0; i < pressureChart.data.labels.length; i++) {

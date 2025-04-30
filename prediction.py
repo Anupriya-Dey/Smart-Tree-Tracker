@@ -15,15 +15,20 @@ context_length = 512
 pred_length = 96
 raw_input = sys.argv[1]
 raw_records = json.loads(raw_input)  # List of dicts like [{"12:00:01": 24.5}, ...]
+sensor_type = sys.argv[2]  # 'Temperature' or 'Pressure'
+
 
 records = []
 for item in raw_records:
     try:
         key = list(item.keys())[0]
         value = item[key]
-        time_obj = datetime.strptime(key, "%H:%M:%S")
-        combined_datetime = datetime.combine(date.today(), time_obj.time())
-        records.append({"date": combined_datetime, "Temperature": value})
+        # time_obj = datetime.strptime(key, "%H:%M:%S")
+        # combined_datetime = datetime.combine(date.today(), time_obj.time())
+        # records.append({"date": combined_datetime, "Temperature": value})
+        
+        datetime_obj = datetime.strptime(key, "%Y-%m-%d %H:%M:%S")
+        records.append({"date": datetime_obj, "Temperature": value})
     except Exception as e:
         print("Skipping invalid item:", item, e)
 
@@ -79,7 +84,7 @@ print("Scaled-back Temperatures:", original_scale)
 
 print("JSON Output:\n", json.dumps(original_scale), flush=True)
 
-output_file = 'prediction_output.json'
+output_file = f'prediction_output_{sensor_type}.json'
 
 # Write predictions to the file
 with open(output_file, 'w') as f:

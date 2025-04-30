@@ -1,0 +1,289 @@
+/* Body Background */
+body {
+  background-color: #111; /* Dark background */
+  color: #fff; /* White text color */
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+}
+
+/* Header */
+h1 {
+  color: #fff; /* White header text */
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 4rem;
+}
+
+/* Main Grid Layout */
+.top-grid {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr; /* Temp and Pressure larger */
+  gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Box Styling */
+.box {
+  background-color: #2a2a2a; /* Lighter black background for boxes */
+  border: 1px solid #444; /* Slightly lighter black border */
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); /* Dark shadow */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: white; /* White text */
+  flex-grow: 1;
+}
+
+/* Large Boxes for Temperature and Pressure */
+.box-large {
+  font-size: 1.4rem;
+  padding: 1.2rem; /* reduced from 2.5rem */
+}
+
+.box-small {
+  font-size: 1.1rem;
+  padding: 1rem; /* reduced from 1.5rem */
+  gap: 15px;
+}
+
+/* Links Styling */
+a {
+  color: #fff; /* White links */
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Bottom Grid for Graph and Location */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 4fr 2fr; /* Graph takes 4fr, Location takes 2fr */
+  gap: 1rem;
+  width: 100%;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+/* Graph Section */
+.chart-section {
+  background-color: #2a2a2a; /* Lighter black background */
+  border-radius: 0.75rem;
+  padding: 2rem;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Location Box Styling */
+.location-box {
+  background-color: #2a2a2a; /* Lighter black background */
+  border-radius: 0.75rem;
+  padding: 2rem;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Subscribe Box Styling */
+.subscribe-box {
+  background-color: #111; /* Lighter black background */
+  border-radius: 0.75rem;
+  padding: 2rem;
+  /* box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); */
+  width: 90%;  /* Adjust width as needed */
+  max-width: 500px; /* Max width of the subscribe box */
+  text-align: center;
+  margin: 2rem auto; /* Center the box and add spacing from the content above */
+}
+
+.subscribe-box h2 {
+  color: #fff; /* White for headings */
+}
+
+.subscribe-box p {
+  color: #ccc; /* Lighter gray for description */
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .top-grid {
+    grid-template-columns: 1fr 1fr; /* Stack boxes vertically */
+  }
+
+  .box {
+    padding: 1.5rem;
+  }
+
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-section, .location-box {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  /* Adjust subscribe box on small screens */
+  .subscribe-box {
+    width: 100%;
+    margin-top: 2rem;
+  }
+}
+
+.thermometer-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.thermometer {
+  width: 20px;
+  height: 100px;
+  background-color: #333;
+  border: 2px solid #777;
+  border-radius: 10px;
+  overflow: hidden;
+  /* margin-bottom: 0.5rem; */
+  position: relative;
+}
+
+.thermometer-fill {
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  height: 0%;
+  transition: height 0.5s ease-in-out, background-color 0.5s ease-in-out;
+}
+
+.pressure-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* padding: 1rem; */
+  gap: 10px;
+  font-size: 2.5rem; /* Increased for prominence */
+
+}
+
+.SensorTitle {
+  font-size: 2.5rem; /* or any size you prefer */
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.large-icon {
+  width: 100px;
+  height: 100px;
+  filter: invert(100%) drop-shadow(0 0 5px #ffffff60);
+}
+
+.sensor-reading {
+  font-size: 2.5rem; /* Increased for prominence */
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 0 8px #ffffff60;
+  text-align: center;
+  margin: 0;
+}
+
+
+.large-icon {
+  filter: invert(100%) drop-shadow(0 0 8px #00c8ff88);
+}
+
+.sensor-reading {
+  text-shadow: 0 0 8px #00c8ff55;
+}
+
+.subdata {
+  font-size: 2rem; /* Increased for prominence */
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 0 8px #ffffff60;
+  text-align: center;
+  margin: 0;
+  text-shadow: 0 0 8px #00c8ff55;
+}
+
+subscribe-box {
+  background: #111;
+  padding: 2rem;
+  border-radius: 1rem;
+  text-align: center;
+  /* box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25); */
+  color: #d7ffd6;
+  max-width: 500px;
+  margin: 2rem auto;
+  /* border: 1px solid #3a5e4b; */
+}
+
+.subscribe-box h2 {
+  color: #90ee90;
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.subscribe-box p {
+  color: #b4e1b4;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.email-input {
+  padding: 0.75rem;
+  width: 80%;
+  max-width: 350px;
+  border: 1px solid #64c28c;
+  border-radius: 0.5rem;
+  background-color: #f6fff7;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  outline: none;
+  transition: border 0.3s ease;
+}
+
+.email-input:focus {
+  border-color: #2fc267;
+  box-shadow: 0 0 6px #2fc26788;
+}
+
+.subscribe-button {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #25a058, #1b7c4a);
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.subscribe-button:hover {
+  background: linear-gradient(135deg, #2ac46b, #239b61);
+  transform: scale(1.05);
+}
+
+.subscribe-button:active {
+  transform: scale(0.98);
+}
+
+.subscription-message {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: #f2fef4;
+}

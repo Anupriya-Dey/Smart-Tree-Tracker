@@ -16,8 +16,8 @@
     body {
       margin: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #0b2e14;
-      color: #e0ffe3;
+      background-color: #111;
+      color: #fff;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -26,8 +26,9 @@
 
     h1 {
       text-align: center;
-      color: #7cff80;
+      color: #fff;
       margin-bottom: 2rem;
+      font-size: 3rem;
     }
 
     #map {
@@ -46,6 +47,7 @@
     }
   </style>
 </head>
+<script src="/alerts.js"></script>
 
 <body>
   <h1>Live Location</h1>
@@ -54,6 +56,25 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+
+    socket.on('sensorData-Temperature', (data) => {
+      checkForTemperatureAlert(data); // <-- Add this
+    });
+
+    socket.on('sensorData-Pressure', (data) => {
+      checkForPressureAlert(data);
+    });
+
+    socket.on('sensorData-GPS_Latitude', (data) => {
+      latestLatitude = data.latest;
+      triggerPositionCheckIfReady();
+    });
+
+    socket.on('sensorData-GPS_Longitude', (data) => {
+      latestLongitude = data.latest;
+      triggerPositionCheckIfReady();
+    });
+
     const socket = io();
 
     // Initialize Leaflet map

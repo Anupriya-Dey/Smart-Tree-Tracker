@@ -59,11 +59,16 @@ const sensorPaths = [
     'GyroscopeY',
     'GyroscopeZ',
     'Latitude',
-    'Longitude'
+    'Longitude',
+    'GPS_Latitude',
+    'GPS_Longitude',
+    'GPS_Altitude',
+    'GPS_Speed'
 ];
 
 const latestSensorData = {}; // Store latest data for each sensor
-let latestPrediction = null;
+let latestTemperaturePrediction = null;
+let latestPressurePrediction = null;
 
 // Set up Firebase listeners for each sensor
 sensorPaths.forEach(sensor => {
@@ -85,35 +90,42 @@ sensorPaths.forEach(sensor => {
         console.log(`Emitting for ${sensor}:`, latestSensorData[sensor]);
         io.emit(`sensorData-${sensor}`, latestSensorData[sensor]);
 
-        // Real-time prediction for Temperature sensor
+        // Real-time prediction
         if (sensor === 'Temperature') {
             const last512 = keys.slice(-512).map(k => ({ [k]: data[k] }));
-            const python = spawn('./venv/Scripts/python.exe', ['prediction.py', JSON.stringify(last512)]);
 
-            python.stdout.on('data', (data) => {
-                console.log(`Python process finished. Now reading prediction from file...`);
-            
-                const filePath = path.join(__dirname, 'prediction_output.json');
-                
-                // Wait for the file to be written and then read it
-                fs.readFile(filePath, 'utf8', (err, data) => {
-                    if (err) {
-                        console.error(`Failed to read prediction_output.json: ${err.toString()}`);
-                        return;
-                    }
-            
-                    try {
-                        latestPrediction = JSON.parse(data.toString());
-                        console.log("Prediction result from file:", latestPrediction);
-                        io.emit('temperaturePrediction', JSON.stringify(latestPrediction));
-                    } catch (e) {
-                        console.error(`Failed to parse JSON from file: ${e.toString()}`);
-                    }
+            const python = spawn('./venv/Scripts/python.exe', ['pred.py', JSON.stringify(last512), sensor]);
+
+            python.stdout.on('data', () => {
+                console.log(`Python process finished for ${sensor}. Reading prediction...`);
+
+                const filePath = path.join(__dirname, `prediction_output_${sensor}.json`);
+                setTimeout(() => {
+                    fs.readFile(filePath, 'utf8', (err, fileData) => {
+                        if (err) {
+                            console.error(`Failed to read prediction_output_${sensor}.json: ${err.toString()}`);
+                            return;
+                        }
+
+                        try {
+                            const parsedPrediction = JSON.parse(fileData);
+                            if (sensor === 'Temperature') {
+                                latestTemperaturePrediction = parsedPrediction;
+                                io.emit('temperaturePrediction', JSON.stringify(parsedPrediction));
+                            } else if (sensor === 'Pressure') {
+                                latestPressurePrediction = parsedPrediction;
+                                io.emit('pressurePrediction', JSON.stringify(parsedPrediction));
+                            }
+                            console.log(`${sensor} prediction result emitted.`);
+                        } catch (e) {
+                            console.error(`Failed to parse ${sensor} prediction JSON: ${e.toString()}`);
+                        }
+                    });
                 });
-            });
+            }, 200); // Delay of 200ms
 
             python.stderr.on('data', (err) => {
-                console.error(`Error from prediction.py: ${err.toString()}`);
+                console.error(`Error from pred.py for ${sensor}: ${err.toString()}`);
             });
         }
     });
@@ -123,12 +135,16 @@ sensorPaths.forEach(sensor => {
 io.on('connection', (socket) => {
     console.log('Client connected');
 
-    // Send all latest sensor data on new connection
+    // Send all latest sensor data
     for (const [sensor, data] of Object.entries(latestSensorData)) {
         socket.emit(`sensorData-${sensor}`, data);
     }
-    if (latestPrediction) {
-        socket.emit('temperaturePrediction', JSON.stringify(latestPrediction));
+
+    if (latestTemperaturePrediction) {
+        socket.emit('temperaturePrediction', JSON.stringify(latestTemperaturePrediction));
+    }
+    if (latestPressurePrediction) {
+        socket.emit('pressurePrediction', JSON.stringify(latestPressurePrediction));
     }
 
     socket.on('disconnect', () => console.log('Client disconnected'));
@@ -141,79 +157,115 @@ server.listen(PORT, () => {
 });
 
 const nodemailer = require('nodemailer');
+const GLOBAL_TEMP_THRESHOLD = 60;
+// const PRESSURE_DROP_THRESHOLD = 950; // example value in hPa
+// const ALTITUDE_THRESHOLD = 5;        // meters (drastic drop = fall)
+// const SPEED_THRESHOLD = 10;          // m/s (for movement alert)
 
-// Configure email transport
-const GLOBAL_TEMP_THRESHOLD = 100;
+let subscribedEmails = [];
+let lastSent = {
+    temperature: null,
+    pressure: null,
+    fall: null,
+    speed: null,
+    position: null,
+};
+
 const transporter = nodemailer.createTransport({
-    service: 'gmail',  // Use Gmail, or change to any email service provider
+    service: 'gmail',
     auth: {
         user: 'iotgroupproject12@gmail.com',
-        pass: 'xehb stuv bhmu dibe',  // Ensure to use environment variables for security
+        pass: 'xehb stuv bhmu dibe',
     },
 });
 
-let subscribedEmails = [];
-
 const loadSubscribedEmails = async () => {
-  const emailRef = db.ref('SubscribedEmails');
-  const snapshot = await emailRef.once('value');
-  const data = snapshot.val();
-
-  if (data) {
-    subscribedEmails = Object.values(data);
-    console.log("✅ Subscribed emails loaded:", subscribedEmails);
-  } else {
-    console.log("📭 No subscribed emails found.");
-  }
+    const emailRef = db.ref('SubscribedEmails');
+    const snapshot = await emailRef.once('value');
+    const data = snapshot.val();
+    subscribedEmails = data ? Object.values(data) : [];
 };
 
+const shouldSend = (lastTimeKey) => {
+    const now = new Date();
+    return !lastSent[lastTimeKey] || (now - lastSent[lastTimeKey] > 3 * 60 * 60 * 1000); // every 3 hours
+};
 
-// Store the last time an email was sent
-let lastEmailTime = null;
+const sendAlert = async (subject, message, type) => {
+    await loadSubscribedEmails();
+    if (subscribedEmails.length === 0) return;
 
-const sendEmailAlert = async (temperature) => {
-    // Get the current time
-    const currentTime = new Date();
-    await loadSubscribedEmails(); // wait for emails to load!
-
-    if (subscribedEmails.length === 0) {
-        console.log("🚫 No subscribed emails to send alert to.");
+    if (!shouldSend(type)) {
+        console.log(`Alert for ${type} suppressed (sent recently).`);
         return;
     }
 
-    // If no email has been sent yet or it has been more than 3 hours since the last email
-    if (temperature > GLOBAL_TEMP_THRESHOLD) {
-        // if (!lastEmailTime || (currentTime - lastEmailTime) >= 3 * 60 * 60 * 1000) {
-            // Create the email content
-            const mailOptions = {
-                from: 'iotgroupproject12@gmail.com',
-                to: subscribedEmails.join(','),
-                subject: 'Forest Fire Alert: High Temperature',
-                text: `Warning! The temperature has risen above 100°C. Current temperature: ${temperature}°C. Please take precautions.`,
-            };
+    const mailOptions = {
+        from: 'iotgroupproject12@gmail.com',
+        to: subscribedEmails.join(','),
+        subject,
+        text: message,
+    };
 
-            // Send the email
-            transporter.sendMail(mailOptions, (error, info) => {
-                if (error) {
-                    console.log('Error sending email:', error);
-                } else {
-                    console.log('Email sent: ' + info.response);
-                    lastEmailTime = currentTime;  // Update the last email sent time
-                }
-
-            });
-        // } else {
-        //     console.log('Email not sent. Less than 3 hours since the last alert.');
-        // }
-    }
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) console.log(`Error sending ${type} alert:`, error);
+        else {
+            console.log(`${type} alert sent:`, info.response);
+            lastSent[type] = new Date();
+        }
+    });
 };
-
-// const io1 = require('socket.io')(server); // Assuming you use express server
 
 io.on('connection', (socket) => {
     console.log('Client connected.');
+
     socket.on('sendTemperatureAlert', ({ temperature }) => {
-        console.log("📧 Preparing to send alert email for temperature:", temperature);
-        sendEmailAlert(temperature);
+        // if (temperature > GLOBAL_TEMP_THRESHOLD) {
+        sendAlert(
+            'Forest Fire Alert',
+            `Warning! Temperature exceeds ${GLOBAL_TEMP_THRESHOLD}°C. Current: ${temperature}°C.`,
+            'temperature'
+        );
+        // }
+    });
+
+    socket.on('sendPressureAlert', ({ pressure }) => {
+        // if (pressure < PRESSURE_DROP_THRESHOLD) {
+        sendAlert(
+            'Storm Alert',
+            `Possible storm detected due to pressure drop. Current pressure: ${pressure} kPa.`,
+            'pressure'
+        );
+        // }
+    });
+
+    socket.on('sendGPS_AltitudeAlert', ({ gps_altitude }) => {
+        // if (altitude < ALTITUDE_THRESHOLD) {
+        sendAlert(
+            'Fall Alert',
+            `Fall detected. Current altitude is unusually low: ${gps_altitude} meters.`,
+            'fall'
+        );
+        // }
+    });
+
+    socket.on('sendGPS_SpeedAlert', ({ gps_speed }) => {
+        // if (speed > SPEED_THRESHOLD) {
+        sendAlert(
+            'Movement Alert',
+            `Significant movement detected. Current speed: ${gps_speed} m/s.`,
+            'speed'
+        );
+        // }
+    });
+
+    socket.on('sendPositionAlert', ({ latitude, longitude }) => {
+        // if (oldLat !== newLat || oldLong !== newLong) {
+        sendAlert(
+            'Position Change Alert',
+            `Device has changed position:\nNew Latitude and Longitude are (${latitude}, ${longitude})`,
+            'position'
+        );
+        // }
     });
 });
