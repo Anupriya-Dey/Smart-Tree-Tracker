@@ -27,22 +27,18 @@ for item in raw_records:
     except Exception as e:
         print("Skipping invalid item:", item, e)
 
-# Create DataFrame
 test_df = pd.DataFrame(records)
 
-# --- Parameters ---
 sequence_length = 10    # How many past values to use for prediction
 predict_length = 100    # Can be changed to 25, 40, or 50
 filename = 'sawtooth_temparature_data.csv'
 
-# --- Load and Normalize Data ---
 df = pd.read_csv(filename)
 temps = df['Temperature'].values.reshape(-1, 1)
 
 scaler = MinMaxScaler()
 temps_scaled = scaler.fit_transform(temps)
 
-# --- Create sequences ---
 X, y = [], []
 for i in range(len(temps_scaled) - sequence_length - predict_length + 1):
     X.append(temps_scaled[i:i + sequence_length])
@@ -50,19 +46,17 @@ for i in range(len(temps_scaled) - sequence_length - predict_length + 1):
 
 X, y = np.array(X), np.array(y)
 
-# --- Train/Test Split ---
 split = int(1 * len(X))
 X_train, X_test = X[:split], X[split:]
 y_train, y_test = y[:split], y[split:]
 
-# --- Build Model ---
 model = Sequential([
     LSTM(64, return_sequences=False, input_shape=(sequence_length, 1)),
     Dense(predict_length)
 ])
 
 model.compile(optimizer='adam', loss='mse')
-model.fit(X_train, y_train, epochs=20, batch_size=32, validation_split=0.1)
+model.fit(X_train, y_train, epochs=10, batch_size=32, validation_split=0.1)
 
 # --- Prediction --
 last_seq = test_df[-sequence_length:]
